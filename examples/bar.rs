@@ -39,7 +39,7 @@ fn main() -> Result<(), LvError> {
     let mut bar = Bar::create(&mut screen)?;
     bar.set_size(175, 20);
     bar.set_align(Align::Center, 0, 10);
-    bar.set_range(0, 100)?;
+    bar.set_range(0, 100);
     bar.on_event(|_b, _e| {
         println!("Completed!");
     })?;
@@ -50,7 +50,7 @@ fn main() -> Result<(), LvError> {
     bar.add_style(Part::Any, &mut ind_style);
 
     let mut loading_lbl = Label::create(&mut screen)?;
-    loading_lbl.set_text(CString::new("Loading...").unwrap().as_c_str())?;
+    loading_lbl.set_text(CString::new("Loading...").unwrap().as_c_str());
     loading_lbl.set_align(Align::OutTopMid, 0, 0);
 
     let mut loading_style = Style::default();
