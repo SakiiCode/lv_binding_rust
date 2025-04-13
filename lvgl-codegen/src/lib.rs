@@ -6,7 +6,6 @@ use proc_macro2::{Ident, TokenStream};
 use quote::quote;
 use quote::{format_ident, ToTokens};
 use regex::Regex;
-use syn::token::Type;
 use std::collections::HashMap;
 use std::error::Error;
 use syn::{parse_str, FnArg, ForeignItem, ForeignItemFn, Item, ReturnType, TypePath};
@@ -19,12 +18,14 @@ const TYPE_POSTFIX: &str = "_t";
 lazy_static! {
     static ref TYPE_MAPPINGS: HashMap<&'static str, &'static str> = [
         ("u16", "u16"),
+        ("u32", "u32"),
         ("i32", "i32"),
         ("i16", "i16"),
         ("u8", "u8"),
         ("i8", "i8"),
         ("bool", "bool"),
         ("* const cty :: c_char", "_"),
+        ("* mut * const cty :: c_char", "_"),
     ]
     .iter()
     .cloned()
@@ -327,9 +328,13 @@ impl LvArg {
 
     pub fn get_value_usage(&self) -> TokenStream {
         let ident = self.get_name_ident();
-        if self.typ.is_str() {
+        if self.typ.is_const_str() {
             quote! {
                 #ident.as_ptr()
+            }
+        }else if self.typ.is_mut_str() {
+            quote! {
+                &mut #ident.as_ptr()
             }
         } else {
             quote! {
@@ -380,8 +385,12 @@ impl LvType {
         self.literal_name.starts_with("const ")
     }
 
-    pub fn is_str(&self) -> bool {
-        self.literal_name.ends_with("* const cty :: c_char")
+    pub fn is_const_str(&self) -> bool {
+        self.literal_name == "* const cty :: c_char"
+    }
+
+    pub fn is_mut_str(&self) -> bool {
+        self.literal_name == "* mut * const cty :: c_char"
     }
 
     pub fn is_mut_native_object(&self) -> bool {
@@ -393,12 +402,10 @@ impl Rusty for LvType {
     type Parent = LvArg;
 
     fn code(&self, _parent: &Self::Parent) -> WrapperResult<TokenStream> {
-        if self.literal_name.starts_with("* mut * const"){
-            // TODO: Handle mutable strings like "* mut * const i8"
-            return Err(WrapperError::Skip);
-        } 
-        let val = if self.is_str() {
+        let val = if self.is_const_str() {
             quote!(&cstr_core::CStr)
+        }else if self.is_mut_str() {
+            quote!(&mut cstr_core::CStr)
         } else if self.is_mut_native_object() {
             quote!(&mut impl NativeObject)
         } else{
@@ -407,10 +414,12 @@ impl Rusty for LvType {
                 Some(name)=> parse_str(name).expect(&format!("Cannot parse {name} to a type")),
                 None =>{
                     if literal_name.contains(LIB_PREFIX) && literal_name.ends_with(TYPE_POSTFIX){
+                        // LVGL types
                         let raw_name = literal_name.replace("* const ", "").replace("* mut ", "");
                         parse_str(&raw_name).expect(&format!("Cannot parse {raw_name} to a type"))
                     }else{
-                        println!("Skipping {literal_name}");
+                        // Other types, for example "*mut cty::c_void"
+                        println!("Unknown type {literal_name}");
                         return Err(WrapperError::Skip);
                     }
                 }
@@ -655,6 +664,38 @@ mod test {
                     lvgl_sys::lv_label_set_text(
                         self.core.raw().as_mut(),
                         text.as_ptr()
+                    );
+                }
+            }
+
+        };
+
+        assert_eq!(code.to_string(), expected_code.to_string());
+    }
+
+    #[test]
+    fn generate_method_wrapper_for_mut_str_types_as_argument() {
+        let bindgen_code = quote! {
+            extern "C" {
+                pub fn lv_btnmatrix_set_map(obj: *mut lv_obj_t, map: *mut *const cty::c_char);
+            }
+        };
+        let cg = CodeGen::load_func_defs(bindgen_code.to_string().as_str()).unwrap();
+
+        let btnmatrix_set_map = cg.get(0).unwrap().clone();
+        let parent_widget = LvWidget {
+            name: "btnmatrix".to_string(),
+            methods: vec![],
+        };
+
+        let code = btnmatrix_set_map.code(&parent_widget).unwrap();
+        let expected_code = quote! {
+
+            pub fn set_map(&mut self, map: &mut cstr_core::CStr) -> () {
+                unsafe {
+                    lvgl_sys::lv_btnmatrix_set_map(
+                        self.core.raw().as_mut(),
+                        &mut map.as_ptr()
                     );
                 }
             }
