@@ -406,34 +406,24 @@ impl Rusty for LvType {
             quote!(&cstr_core::CStr)
         } else if self.is_mut_native_object() {
             quote!(&mut impl NativeObject)
-        } else{
+        } else {
             let literal_name = self.literal_name.as_str();
-            let ty: TypePath = match TYPE_MAPPINGS.get(literal_name) {
-                Some(name)=> parse_str(name).expect(&format!("Cannot parse {name} to a type")),
-                None =>{
-                    if literal_name.contains(LIB_PREFIX) && literal_name.ends_with(TYPE_POSTFIX){
-                        // LVGL types
-                        let raw_name = literal_name.replace("* const ", "").replace("* mut ", "");
-                        parse_str(&raw_name).expect(&format!("Cannot parse {raw_name} to a type"))
-                    }else{
-                        // Other types, for example "*mut cty::c_void"
-                        println!("Unknown type {literal_name}");
-                        return Err(WrapperError::Skip);
-                    }
-                }
-            };
+            let raw_name = literal_name.replace("* const ", "").replace("* mut ", "");
+            if raw_name == "cty :: c_void" {
+                println!("Void pointers are not yet supported ({literal_name})");
+                return Err(WrapperError::Skip);
+            }
+            let ty: TypePath = parse_str(&raw_name).expect(&format!("Cannot parse {raw_name} to a type"));
             if self.literal_name.starts_with("* mut") {
                 quote!(&mut #ty)
             } else if self.literal_name.starts_with("*") {
                 quote!(&#ty)
-            }else{
+            } else {
                 quote!(#ty)
             }
-
         };
 
         Ok(quote! {#val})
-        
     }
 }
 
