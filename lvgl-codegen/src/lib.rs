@@ -8,7 +8,7 @@ use quote::{format_ident, ToTokens};
 use regex::Regex;
 use std::collections::HashMap;
 use std::error::Error;
-use syn::{FnArg, ForeignItem, ForeignItemFn, Item, ReturnType};
+use syn::{parse_str, FnArg, ForeignItem, ForeignItemFn, Item, ReturnType, TypePath};
 
 type CGResult<T> = Result<T, Box<dyn Error>>;
 
@@ -22,8 +22,10 @@ lazy_static! {
         ("u8", "u8"),
         ("bool", "bool"),
         ("* const cty :: c_char", "_"),
-        ("* mut lv_obj_t", "lv_obj_t"),
-        ("lv_coord_t", "i16")
+        ("* mut lv_obj_t", "_"),
+        ("lv_coord_t", "lvgl_sys::lv_coord_t"),
+        ("lv_img_size_mode_t","lvgl_sys::lv_img_size_mode_t"),
+        ("lv_point_t","lv_sys::lvgl_point_t"),
     ]
     .iter()
     .cloned()
@@ -399,14 +401,14 @@ impl Rusty for LvType {
                 } else if self.is_mut_native_object() {
                     quote!(&mut impl NativeObject)
                 } else if self.literal_name.starts_with("* mut") {
-                    let ident = format_ident!("{}", name);
-                    quote!(&mut #ident)    
+                    let ty: TypePath = parse_str(name).unwrap();
+                    quote!(&mut #ty)
                 } else if self.literal_name.starts_with("*") {
-                    let ident = format_ident!("{}", name);
-                    quote!(&#ident)
+                    let ty: TypePath = parse_str(name).unwrap();
+                    quote!(&#ty)
                 } else {
-                    let ident = format_ident!("{}", name);
-                    quote!(#ident)
+                    let ty: TypePath = parse_str(name).unwrap();
+                    quote!(#ty)
                 };
                 Ok(quote! {
                     #val

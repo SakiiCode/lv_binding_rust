@@ -20,7 +20,6 @@ fn main() {
         .collect();
 
     let code = quote! {
-        use lvgl_sys::lv_obj_t;
         #(#widgets_impl)*
     };
 
