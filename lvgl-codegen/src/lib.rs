@@ -181,7 +181,7 @@ impl Rusty for LvFunc {
                 }
             });
 
-        let args_processing = self
+        let args_preprocessing = self
             .args
             .iter()
             .enumerate()
@@ -190,7 +190,31 @@ impl Rusty for LvFunc {
                 let next_arg = if i == 0 {
                     quote!()
                 } else {
-                    let var = arg.get_processing();
+                    let var = arg.get_preprocessing();
+                    quote!(#var)
+                };
+                if args.is_empty() {
+                    quote! {
+                        #next_arg
+                    }
+                } else {
+                    quote! {
+                        #args
+                        #next_arg
+                    }
+                }
+            });
+
+        let args_postprocessing = self
+            .args
+            .iter()
+            .enumerate()
+            .fold(quote!(), |args, (i, arg)| {
+                // if first arg is `const`, then it should be immutable
+                let next_arg = if i == 0 {
+                    quote!()
+                } else {
+                    let var = arg.get_postprocessiong();
                     quote!(#var)
                 };
                 if args.is_empty() {
@@ -251,12 +275,12 @@ impl Rusty for LvFunc {
 
         Ok(quote! {
             pub fn #func_name(#args_decl) -> #return_type {
-                #args_processing
                 unsafe {
+                    #args_preprocessing
                     lvgl_sys::#original_func_name(#ffi_args)#optional_semicolon
+                    #args_postprocessing
+                    #explicit_ok
                 }
-
-                #explicit_ok
             }
         })
     }
@@ -311,12 +335,31 @@ impl LvArg {
             .unwrap_or_else(|_| format_ident!("r#{}", self.name.as_str()))
     }
 
-    pub fn get_processing(&self) -> TokenStream {
+    pub fn get_preprocessing(&self) -> TokenStream {
         // TODO: A better way to handle this, instead of `is_sometype()`, is using the Rust
         //       type system itself.
 
-        // No need to pre-process this type of argument
-        quote! {}
+        if self.get_type().is_mut_str(){
+            // Convert CString to *mut i8
+            let name = format_ident!("{}",&self.name);
+            quote! {
+                let raw_c_str = #name.clone().into_raw();
+            }
+        }else{
+            quote! {}
+        }
+    }
+
+    pub fn get_postprocessiong(&self) -> TokenStream{
+        if self.get_type().is_mut_str(){
+            // Convert *mut i8 back to CString
+            let name = format_ident!("{}",&self.name);
+            quote! {
+                *#name = cstr_core::CString::from_raw(raw_c_str);
+            }
+        }else{
+            quote! {}
+        }
     }
 
     pub fn get_value_usage(&self) -> TokenStream {
@@ -327,7 +370,7 @@ impl LvArg {
             }
         }else if self.typ.is_mut_str() {
             quote! {
-                &mut #ident.as_ptr()
+                raw_c_str
             }
         } else {
             quote! {
@@ -383,7 +426,7 @@ impl LvType {
     }
 
     pub fn is_mut_str(&self) -> bool {
-        self.literal_name == "* mut * const cty :: c_char"
+        self.literal_name == "* mut cty :: c_char"
     }
 
     pub fn is_mut_native_object(&self) -> bool {
@@ -393,16 +436,25 @@ impl LvType {
     pub fn is_pointer(&self) -> bool {
         self.literal_name.starts_with('*')
     }
+
+    pub fn is_array(&self) -> bool {
+        self.literal_name.starts_with("* mut *")
+    }
 }
 
 impl Rusty for LvType {
     type Parent = LvArg;
 
     fn code(&self, _parent: &Self::Parent) -> WrapperResult<TokenStream> {
-        let val = if self.is_const_str() || self.is_mut_str() {
+        let val = if self.is_const_str() {
             quote!(&cstr_core::CStr)
+        }else if self.is_mut_str() {
+            quote!(&mut cstr_core::CString)
         } else if self.is_mut_native_object() {
             quote!(&mut impl NativeObject)
+        }else if self.is_array() {
+            println!("Array as argument ({})", self.literal_name);
+            return Err(WrapperError::Skip);
         } else {
             let literal_name = self.literal_name.as_str();
             let raw_name = literal_name.replace("* const ", "").replace("* mut ", "");
@@ -420,7 +472,7 @@ impl Rusty for LvType {
             }
         };
 
-        Ok(quote! {#val})
+        Ok(val)
     }
 }
 
@@ -662,26 +714,29 @@ mod test {
     fn generate_method_wrapper_for_mut_str_types_as_argument() {
         let bindgen_code = quote! {
             extern "C" {
-                pub fn lv_btnmatrix_set_map(obj: *mut lv_obj_t, map: *mut *const cty::c_char);
+                pub fn lv_dropdown_get_selected_str(obj: *const lv_obj_t, buf: *mut cty::c_char, buf_size: u32);
             }
         };
         let cg = CodeGen::load_func_defs(bindgen_code.to_string().as_str()).unwrap();
 
-        let btnmatrix_set_map = cg.get(0).unwrap().clone();
+        let dropdown_get_selected_str = cg.get(0).unwrap().clone();
         let parent_widget = LvWidget {
-            name: "btnmatrix".to_string(),
+            name: "dropdown".to_string(),
             methods: vec![],
         };
 
-        let code = btnmatrix_set_map.code(&parent_widget).unwrap();
+        let code = dropdown_get_selected_str.code(&parent_widget).unwrap();
         let expected_code = quote! {
 
-            pub fn set_map(&mut self, map: &cstr_core::CStr) -> () {
+            pub fn get_selected_str(&mut self, buf: &mut cstr_core::CString, buf_size:u32) -> () {
                 unsafe {
-                    lvgl_sys::lv_btnmatrix_set_map(
+                    let raw_c_str = buf.clone().into_raw();
+                    lvgl_sys::lv_dropdown_get_selected_str(
                         self.core.raw().as_mut(),
-                        &mut map.as_ptr()
+                        raw_c_str,
+                        buf_size
                     );
+                    *buf = CString::from_raw(raw_c_str);
                 }
             }
 
