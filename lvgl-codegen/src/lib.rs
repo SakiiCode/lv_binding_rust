@@ -6,6 +6,7 @@ use proc_macro2::{Ident, TokenStream};
 use quote::quote;
 use quote::{format_ident, ToTokens};
 use regex::Regex;
+use syn::token::Type;
 use std::collections::HashMap;
 use std::error::Error;
 use syn::{parse_str, FnArg, ForeignItem, ForeignItemFn, Item, ReturnType, TypePath};
@@ -13,6 +14,7 @@ use syn::{parse_str, FnArg, ForeignItem, ForeignItemFn, Item, ReturnType, TypePa
 type CGResult<T> = Result<T, Box<dyn Error>>;
 
 const LIB_PREFIX: &str = "lv_";
+const TYPE_POSTFIX: &str = "_t";
 
 lazy_static! {
     static ref TYPE_MAPPINGS: HashMap<&'static str, &'static str> = [
@@ -20,12 +22,9 @@ lazy_static! {
         ("i32", "i32"),
         ("i16", "i16"),
         ("u8", "u8"),
+        ("i8", "i8"),
         ("bool", "bool"),
         ("* const cty :: c_char", "_"),
-        ("* mut lv_obj_t", "_"),
-        ("lv_coord_t", "lvgl_sys::lv_coord_t"),
-        ("lv_img_size_mode_t","lvgl_sys::lv_img_size_mode_t"),
-        ("lv_point_t","lv_sys::lvgl_point_t"),
     ]
     .iter()
     .cloned()
@@ -394,28 +393,40 @@ impl Rusty for LvType {
     type Parent = LvArg;
 
     fn code(&self, _parent: &Self::Parent) -> WrapperResult<TokenStream> {
-        match TYPE_MAPPINGS.get(self.literal_name.as_str()) {
-            Some(name) => {
-                let val = if self.is_str() {
-                    quote!(&cstr_core::CStr)
-                } else if self.is_mut_native_object() {
-                    quote!(&mut impl NativeObject)
-                } else if self.literal_name.starts_with("* mut") {
-                    let ty: TypePath = parse_str(name).unwrap();
-                    quote!(&mut #ty)
-                } else if self.literal_name.starts_with("*") {
-                    let ty: TypePath = parse_str(name).unwrap();
-                    quote!(&#ty)
-                } else {
-                    let ty: TypePath = parse_str(name).unwrap();
-                    quote!(#ty)
-                };
-                Ok(quote! {
-                    #val
-                })
+        if self.literal_name.starts_with("* mut * const"){
+            // TODO: Handle mutable strings like "* mut * const i8"
+            return Err(WrapperError::Skip);
+        } 
+        let val = if self.is_str() {
+            quote!(&cstr_core::CStr)
+        } else if self.is_mut_native_object() {
+            quote!(&mut impl NativeObject)
+        } else{
+            let literal_name = self.literal_name.as_str();
+            let ty: TypePath = match TYPE_MAPPINGS.get(literal_name) {
+                Some(name)=> parse_str(name).expect(&format!("Cannot parse {name} to a type")),
+                None =>{
+                    if literal_name.contains(LIB_PREFIX) && literal_name.ends_with(TYPE_POSTFIX){
+                        let raw_name = literal_name.replace("* const ", "").replace("* mut ", "");
+                        parse_str(&raw_name).expect(&format!("Cannot parse {raw_name} to a type"))
+                    }else{
+                        println!("Skipping {literal_name}");
+                        return Err(WrapperError::Skip);
+                    }
+                }
+            };
+            if self.literal_name.starts_with("* mut") {
+                quote!(&mut #ty)
+            } else if self.literal_name.starts_with("*") {
+                quote!(&#ty)
+            }else{
+                quote!(#ty)
             }
-            None => Err(WrapperError::Skip),
-        }
+
+        };
+
+        Ok(quote! {#val})
+        
     }
 }
 
@@ -706,7 +717,7 @@ mod test {
 
         let code = arc_rotate_obj_to_angle.code(&parent_widget).unwrap();
         let expected_code = quote! {
-            pub fn rotate_obj_to_angle(&mut self, obj_to_rotate: &mut impl NativeObject, r_offset: lvgl_sys::lv_coord_t) -> () {
+            pub fn rotate_obj_to_angle(&mut self, obj_to_rotate: &mut impl NativeObject, r_offset: lv_coord_t) -> () {
                 unsafe {
                     lvgl_sys::lv_arc_rotate_obj_to_angle(
                         self.core.raw().as_mut(),

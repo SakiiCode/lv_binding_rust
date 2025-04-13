@@ -20,6 +20,7 @@ fn main() {
         .collect();
 
     let code = quote! {
+        use lvgl_sys::*;
         #(#widgets_impl)*
     };
 

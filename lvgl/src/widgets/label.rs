@@ -32,11 +32,11 @@ mod alloc_imp {
 }
 
 impl Label<'_> {
-    pub fn set_long_mode(&mut self, long_mode: LabelLongMode) {
+    /*pub fn set_long_mode(&mut self, long_mode: LabelLongMode) {
         unsafe {
             lvgl_sys::lv_label_set_long_mode(self.raw().as_mut(), long_mode.into());
         }
-    }
+    }*/
 
     pub fn get_long_mode(&self) -> u8 {
         unsafe { lvgl_sys::lv_label_get_long_mode(self.raw().as_ref()) }
