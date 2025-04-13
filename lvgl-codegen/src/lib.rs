@@ -18,9 +18,12 @@ lazy_static! {
     static ref TYPE_MAPPINGS: HashMap<&'static str, &'static str> = [
         ("u16", "u16"),
         ("i32", "i32"),
+        ("i16", "i16"),
         ("u8", "u8"),
         ("bool", "bool"),
         ("* const cty :: c_char", "_"),
+        ("* mut lv_obj_t", "lv_obj_t"),
+        ("lv_coord_t", "i16")
     ]
     .iter()
     .cloned()
@@ -386,7 +389,10 @@ impl Rusty for LvType {
             Some(name) => {
                 let val = if self.is_str() {
                     quote!(&cstr_core::CStr)
-                } else if self.literal_name.contains("lv_") {
+                } else if self.literal_name.contains("* mut") {
+                    let ident = format_ident!("{}", name);
+                    quote!(&mut #ident)    
+                } else if self.literal_name.contains("*") {
                     let ident = format_ident!("{}", name);
                     quote!(&#ident)
                 } else {
@@ -661,6 +667,40 @@ mod test {
                     lvgl_sys::lv_label_set_text(
                         self.core.raw().as_mut(),
                         text.as_ptr()
+                    );
+                }
+            }
+        };
+        assert_eq!(code.to_string(), expected_code.to_string());
+    }
+
+    #[test]
+    fn generate_method_wrapper_with_pointer_parameter() {
+        let bindgen_code = quote! {
+            extern "C" {
+                pub fn lv_arc_rotate_obj_to_angle(
+                    obj: *const lv_obj_t,
+                    obj_to_rotate: *mut lv_obj_t,
+                    r_offset: lv_coord_t,
+                );
+            }
+        };
+        let cg = CodeGen::load_func_defs(bindgen_code.to_string().as_str()).unwrap();
+
+        let arc_rotate_obj_to_angle = cg.get(0).unwrap().clone();
+        let parent_widget = LvWidget {
+            name: "arc".to_string(),
+            methods: vec![],
+        };
+
+        let code = arc_rotate_obj_to_angle.code(&parent_widget).unwrap();
+        let expected_code = quote! {
+            pub fn rotate_obj_to_angle(&mut self, obj_to_rotate: &mut lv_obj_t, r_offset: i16) -> () {
+                unsafe {
+                    lvgl_sys::lv_arc_rotate_obj_to_angle(
+                        self.core.raw().as_mut(),
+                        obj_to_rotate,
+                        r_offset
                     );
                 }
             }
