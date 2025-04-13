@@ -13,7 +13,6 @@ use syn::{parse_str, FnArg, ForeignItem, ForeignItemFn, Item, ReturnType, TypePa
 type CGResult<T> = Result<T, Box<dyn Error>>;
 
 const LIB_PREFIX: &str = "lv_";
-const TYPE_POSTFIX: &str = "_t";
 
 lazy_static! {
     static ref TYPE_MAPPINGS: HashMap<&'static str, &'static str> = [
@@ -24,8 +23,6 @@ lazy_static! {
         ("u8", "u8"),
         ("i8", "i8"),
         ("bool", "bool"),
-        ("* const cty :: c_char", "_"),
-        ("* mut * const cty :: c_char", "_"),
     ]
     .iter()
     .cloned()
@@ -141,15 +138,11 @@ impl Rusty for LvFunc {
             // function returns something
             _ => {
                 let return_value: &LvType = self.ret.as_ref().unwrap();
-                match return_value.literal_name.as_str() {
-                    "bool" => quote!(bool),
-                    "u32" => quote!(u32),
-                    "i32" => quote!(i32),
-                    "u16" => quote!(u16),
-                    "i16" => quote!(i16),
-                    "u8" => quote!(u8),
-                    "i8" => quote!(i8),
-                    _ => return Err(WrapperError::Skip)
+                if !return_value.is_pointer(){
+                    parse_str(&return_value.literal_name).expect(&format!("Cannot parse {} as type",return_value.literal_name))
+                }else{
+                    println!("Return value is pointer ({})", return_value.literal_name);
+                    return Err(WrapperError::Skip);
                 }
             }
         };
@@ -396,6 +389,10 @@ impl LvType {
     pub fn is_mut_native_object(&self) -> bool {
         self.literal_name == "* mut lv_obj_t"
     }
+
+    pub fn is_pointer(&self) -> bool {
+        self.literal_name.starts_with('*')
+    }
 }
 
 impl Rusty for LvType {
@@ -410,7 +407,7 @@ impl Rusty for LvType {
             let literal_name = self.literal_name.as_str();
             let raw_name = literal_name.replace("* const ", "").replace("* mut ", "");
             if raw_name == "cty :: c_void" {
-                println!("Void pointers are not yet supported ({literal_name})");
+                println!("Void pointer as argument ({literal_name})");
                 return Err(WrapperError::Skip);
             }
             let ty: TypePath = parse_str(&raw_name).expect(&format!("Cannot parse {raw_name} to a type"));

@@ -3,7 +3,7 @@ use crate::widgets::Table;
 use core::mem::MaybeUninit;
 
 impl Table<'_> {
-    /// Returns the selected cell as a tuple of (row, column).
+    /*/// Returns the selected cell as a tuple of (row, column).
     pub fn get_selected_cell(&self) -> (u16, u16) {
         let mut row = MaybeUninit::<u16>::uninit();
         let mut col = MaybeUninit::<u16>::uninit();
@@ -16,5 +16,5 @@ impl Table<'_> {
             // The values get initialised by LVGL
             (row.assume_init(), col.assume_init())
         }
-    }
+    }*/
 }
