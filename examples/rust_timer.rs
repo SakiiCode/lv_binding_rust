@@ -84,7 +84,7 @@ fn main() -> Result<(), LvError> {
             i = 0;
             lvgl::event_send(&mut bar, Event::Clicked);
         }
-        bar.set_value(i, AnimationState::ON);
+        bar.set_value(i, AnimationState::ON.into());
         i += 1;
 
         lvgl::task_handler();
