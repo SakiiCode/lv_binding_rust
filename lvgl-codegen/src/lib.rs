@@ -402,10 +402,8 @@ impl Rusty for LvType {
     type Parent = LvArg;
 
     fn code(&self, _parent: &Self::Parent) -> WrapperResult<TokenStream> {
-        let val = if self.is_const_str() {
+        let val = if self.is_const_str() || self.is_mut_str() {
             quote!(&cstr_core::CStr)
-        }else if self.is_mut_str() {
-            quote!(&mut cstr_core::CStr)
         } else if self.is_mut_native_object() {
             quote!(&mut impl NativeObject)
         } else{
@@ -691,7 +689,7 @@ mod test {
         let code = btnmatrix_set_map.code(&parent_widget).unwrap();
         let expected_code = quote! {
 
-            pub fn set_map(&mut self, map: &mut cstr_core::CStr) -> () {
+            pub fn set_map(&mut self, map: &cstr_core::CStr) -> () {
                 unsafe {
                     lvgl_sys::lv_btnmatrix_set_map(
                         self.core.raw().as_mut(),
