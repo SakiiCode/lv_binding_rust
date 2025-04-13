@@ -222,6 +222,9 @@ impl Rusty for LvFunc {
             .fold(quote!(), |args_accumulator, (arg_idx, arg)| {
                 let next_arg = if arg_idx == 0 {
                     quote!(self.core.raw().as_mut())
+                } else if arg.typ.is_mut_native_object() {
+                    let var = arg.get_value_usage();
+                    quote! {#var.raw().as_mut()}
                 } else {
                     let var = arg.get_value_usage();
                     quote!(#var)
@@ -379,6 +382,10 @@ impl LvType {
     pub fn is_str(&self) -> bool {
         self.literal_name.ends_with("* const cty :: c_char")
     }
+
+    pub fn is_mut_native_object(&self) -> bool {
+        self.literal_name == "* mut lv_obj_t"
+    }
 }
 
 impl Rusty for LvType {
@@ -389,10 +396,12 @@ impl Rusty for LvType {
             Some(name) => {
                 let val = if self.is_str() {
                     quote!(&cstr_core::CStr)
-                } else if self.literal_name.contains("* mut") {
+                } else if self.is_mut_native_object() {
+                    quote!(&mut impl NativeObject)
+                } else if self.literal_name.starts_with("* mut") {
                     let ident = format_ident!("{}", name);
                     quote!(&mut #ident)    
-                } else if self.literal_name.contains("*") {
+                } else if self.literal_name.starts_with("*") {
                     let ident = format_ident!("{}", name);
                     quote!(&#ident)
                 } else {
@@ -675,7 +684,7 @@ mod test {
     }
 
     #[test]
-    fn generate_method_wrapper_with_pointer_parameter() {
+    fn generate_method_wrapper_with_mut_obj_parameter() {
         let bindgen_code = quote! {
             extern "C" {
                 pub fn lv_arc_rotate_obj_to_angle(
@@ -695,11 +704,11 @@ mod test {
 
         let code = arc_rotate_obj_to_angle.code(&parent_widget).unwrap();
         let expected_code = quote! {
-            pub fn rotate_obj_to_angle(&mut self, obj_to_rotate: &mut lv_obj_t, r_offset: i16) -> () {
+            pub fn rotate_obj_to_angle(&mut self, obj_to_rotate: &mut impl NativeObject, r_offset: lvgl_sys::lv_coord_t) -> () {
                 unsafe {
                     lvgl_sys::lv_arc_rotate_obj_to_angle(
                         self.core.raw().as_mut(),
-                        obj_to_rotate,
+                        obj_to_rotate.raw().as_mut(),
                         r_offset
                     );
                 }
