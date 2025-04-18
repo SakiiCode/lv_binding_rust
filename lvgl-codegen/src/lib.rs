@@ -342,8 +342,9 @@ impl LvArg {
         if self.get_type().is_mut_str(){
             // Convert CString to *mut i8
             let name = format_ident!("{}",&self.name);
+            let name_raw = format_ident!("{}_raw",&self.name);
             quote! {
-                let raw_c_str = #name.clone().into_raw();
+                let #name_raw = #name.clone().into_raw();
             }
         }else{
             quote! {}
@@ -354,8 +355,9 @@ impl LvArg {
         if self.get_type().is_mut_str(){
             // Convert *mut i8 back to CString
             let name = format_ident!("{}",&self.name);
+            let name_raw = format_ident!("{}_raw",&self.name);
             quote! {
-                *#name = cstr_core::CString::from_raw(raw_c_str);
+                *#name = cstr_core::CString::from_raw(#name_raw);
             }
         }else{
             quote! {}
@@ -369,8 +371,9 @@ impl LvArg {
                 #ident.as_ptr()
             }
         }else if self.typ.is_mut_str() {
+            let ident_raw = format_ident!("{}_raw",&ident);
             quote! {
-                raw_c_str
+                #ident_raw
             }
         } else {
             quote! {
@@ -730,13 +733,13 @@ mod test {
 
             pub fn get_selected_str(&mut self, buf: &mut cstr_core::CString, buf_size:u32) -> () {
                 unsafe {
-                    let raw_c_str = buf.clone().into_raw();
+                    let buf_raw = buf.clone().into_raw();
                     lvgl_sys::lv_dropdown_get_selected_str(
                         self.core.raw().as_mut(),
-                        raw_c_str,
+                        buf_raw,
                         buf_size
                     );
-                    *buf = CString::from_raw(raw_c_str);
+                    *buf = cstr_core::CString::from_raw(buf_raw);
                 }
             }
 
