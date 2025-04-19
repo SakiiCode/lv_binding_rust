@@ -138,9 +138,12 @@ impl Rusty for LvFunc {
             // function returns something
             _ => {
                 let return_value: &LvType = self.ret.as_ref().unwrap();
-                if !return_value.is_pointer(){
-                    parse_str(&return_value.literal_name).expect(&format!("Cannot parse {} as type",return_value.literal_name))
-                }else{
+                if !return_value.is_pointer() {
+                    parse_str(&return_value.literal_name).expect(&format!(
+                        "Cannot parse {} as type",
+                        return_value.literal_name
+                    ))
+                } else {
                     println!("Return value is pointer ({})", return_value.literal_name);
                     return Err(WrapperError::Skip);
                 }
@@ -156,30 +159,30 @@ impl Rusty for LvFunc {
         //
         // - Iif the first argument (of the C function) is const then we require a &self immutable reference, otherwise an &mut self reference
         // - The arguments will be appended to the accumulator (args_accumulator) as they are generated in the closure
-        let args_decl = self
-            .args
-            .iter()
-            .enumerate()
-            .fold(quote!(), |args_accumulator, (arg_idx, arg)| {
-                let next_arg = if arg_idx == 0 {
-                    if arg.get_type().is_const() {
-                        quote!(&self)
+        let args_decl =
+            self.args
+                .iter()
+                .enumerate()
+                .fold(quote!(), |args_accumulator, (arg_idx, arg)| {
+                    let next_arg = if arg_idx == 0 {
+                        if arg.get_type().is_const() {
+                            quote!(&self)
+                        } else {
+                            quote!(&mut self)
+                        }
                     } else {
-                        quote!(&mut self)
-                    }
-                } else {
-                    arg.code(self).unwrap()
-                };
+                        arg.code(self).unwrap()
+                    };
 
-                // If the accummulator is empty then we call quote! only with the next_arg content
-                if args_accumulator.is_empty() {
-                    quote! {#next_arg}
-                }
-                // Otherwise we append next_arg at the end of the accumulator
-                else {
-                    quote! {#args_accumulator, #next_arg}
-                }
-            });
+                    // If the accummulator is empty then we call quote! only with the next_arg content
+                    if args_accumulator.is_empty() {
+                        quote! {#next_arg}
+                    }
+                    // Otherwise we append next_arg at the end of the accumulator
+                    else {
+                        quote! {#args_accumulator, #next_arg}
+                    }
+                });
 
         let args_preprocessing = self
             .args
@@ -234,30 +237,30 @@ impl Rusty for LvFunc {
         // - The first argument will be always self.core.raw().as_mut() (see quote! when arg_idx == 0), it's most likely a pointer to lv_obj_t
         //   TODO: When handling getters this should be self.raw().as_ptr() instead, this also requires updating args_decl
         // - The arguments will be appended to the accumulator (args_accumulator) as they are generated in the closure
-        let ffi_args = self
-            .args
-            .iter()
-            .enumerate()
-            .fold(quote!(), |args_accumulator, (arg_idx, arg)| {
-                let next_arg = if arg_idx == 0 {
-                    quote!(self.core.raw().as_mut())
-                } else if arg.typ.is_mut_native_object() {
-                    let var = arg.get_value_usage();
-                    quote! {#var.raw().as_mut()}
-                } else {
-                    let var = arg.get_value_usage();
-                    quote!(#var)
-                };
+        let ffi_args =
+            self.args
+                .iter()
+                .enumerate()
+                .fold(quote!(), |args_accumulator, (arg_idx, arg)| {
+                    let next_arg = if arg_idx == 0 {
+                        quote!(self.core.raw().as_mut())
+                    } else if arg.typ.is_mut_native_object() {
+                        let var = arg.get_value_usage();
+                        quote! {#var.raw().as_mut()}
+                    } else {
+                        let var = arg.get_value_usage();
+                        quote!(#var)
+                    };
 
-                // If the accummulator is empty then we call quote! only with the next_arg content
-                if args_accumulator.is_empty() {
-                    quote! {#next_arg}
-                }
-                // Otherwise we append next_arg at the end of the accumulator
-                else {
-                    quote! {#args_accumulator, #next_arg}
-                }
-            });
+                    // If the accummulator is empty then we call quote! only with the next_arg content
+                    if args_accumulator.is_empty() {
+                        quote! {#next_arg}
+                    }
+                    // Otherwise we append next_arg at the end of the accumulator
+                    else {
+                        quote! {#args_accumulator, #next_arg}
+                    }
+                });
 
         // NOTE: When the function returns something we can 'avoid' placing an Ok() at the end.
         let explicit_ok = if return_type.is_empty() {
@@ -268,9 +271,9 @@ impl Rusty for LvFunc {
 
         // Append a semicolon at the end of the unsafe code only if there's no return value.
         // Otherwise we should remove it
-        let optional_semicolon= match self.ret {
+        let optional_semicolon = match self.ret {
             None => quote!(;),
-            _ => quote!()
+            _ => quote!(),
         };
 
         Ok(quote! {
@@ -339,27 +342,27 @@ impl LvArg {
         // TODO: A better way to handle this, instead of `is_sometype()`, is using the Rust
         //       type system itself.
 
-        if self.get_type().is_mut_str(){
+        if self.get_type().is_mut_str() {
             // Convert CString to *mut i8
-            let name = format_ident!("{}",&self.name);
-            let name_raw = format_ident!("{}_raw",&self.name);
+            let name = format_ident!("{}", &self.name);
+            let name_raw = format_ident!("{}_raw", &self.name);
             quote! {
                 let #name_raw = #name.clone().into_raw();
             }
-        }else{
+        } else {
             quote! {}
         }
     }
 
-    pub fn get_postprocessiong(&self) -> TokenStream{
-        if self.get_type().is_mut_str(){
+    pub fn get_postprocessiong(&self) -> TokenStream {
+        if self.get_type().is_mut_str() {
             // Convert *mut i8 back to CString
-            let name = format_ident!("{}",&self.name);
-            let name_raw = format_ident!("{}_raw",&self.name);
+            let name = format_ident!("{}", &self.name);
+            let name_raw = format_ident!("{}_raw", &self.name);
             quote! {
                 *#name = cstr_core::CString::from_raw(#name_raw);
             }
-        }else{
+        } else {
             quote! {}
         }
     }
@@ -370,8 +373,8 @@ impl LvArg {
             quote! {
                 #ident.as_ptr()
             }
-        }else if self.typ.is_mut_str() {
-            let ident_raw = format_ident!("{}_raw",&ident);
+        } else if self.typ.is_mut_str() {
+            let ident_raw = format_ident!("{}_raw", &ident);
             quote! {
                 #ident_raw
             }
@@ -451,11 +454,11 @@ impl Rusty for LvType {
     fn code(&self, _parent: &Self::Parent) -> WrapperResult<TokenStream> {
         let val = if self.is_const_str() {
             quote!(&cstr_core::CStr)
-        }else if self.is_mut_str() {
+        } else if self.is_mut_str() {
             quote!(&mut cstr_core::CString)
         } else if self.is_mut_native_object() {
             quote!(&mut impl NativeObject)
-        }else if self.is_array() {
+        } else if self.is_array() {
             println!("Array as argument ({})", self.literal_name);
             return Err(WrapperError::Skip);
         } else {
@@ -465,7 +468,8 @@ impl Rusty for LvType {
                 println!("Void pointer as argument ({literal_name})");
                 return Err(WrapperError::Skip);
             }
-            let ty: TypePath = parse_str(&raw_name).expect(&format!("Cannot parse {raw_name} to a type"));
+            let ty: TypePath =
+                parse_str(&raw_name).expect(&format!("Cannot parse {raw_name} to a type"));
             if self.literal_name.starts_with("* mut") {
                 quote!(&mut #ty)
             } else if self.literal_name.starts_with("*") {
