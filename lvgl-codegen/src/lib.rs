@@ -217,7 +217,7 @@ impl Rusty for LvFunc {
                 let next_arg = if i == 0 {
                     quote!()
                 } else {
-                    let var = arg.get_postprocessiong();
+                    let var = arg.get_postprocessing();
                     quote!(#var)
                 };
                 if args.is_empty() {
@@ -354,7 +354,7 @@ impl LvArg {
         }
     }
 
-    pub fn get_postprocessiong(&self) -> TokenStream {
+    pub fn get_postprocessing(&self) -> TokenStream {
         if self.get_type().is_mut_str() {
             // Convert *mut i8 back to CString
             let name = format_ident!("{}", &self.name);
