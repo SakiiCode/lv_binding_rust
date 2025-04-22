@@ -200,24 +200,40 @@ impl<S> TryFrom<lvgl_sys::lv_event_code_t> for Event<S> {
     type Error = ();
 
     fn try_from(value: lvgl_sys::lv_event_code_t) -> Result<Self, Self::Error> {
-        const LV_EVENT_PRESSED: u32 = lvgl_sys::lv_event_code_t_LV_EVENT_PRESSED;
-        const LV_EVENT_PRESSING: u32 = lvgl_sys::lv_event_code_t_LV_EVENT_PRESSING;
-        const LV_EVENT_PRESS_LOST: u32 = lvgl_sys::lv_event_code_t_LV_EVENT_PRESS_LOST;
-        const LV_EVENT_SHORT_CLICKED: u32 = lvgl_sys::lv_event_code_t_LV_EVENT_SHORT_CLICKED;
-        const LV_EVENT_CLICKED: u32 = lvgl_sys::lv_event_code_t_LV_EVENT_CLICKED;
-        const LV_EVENT_LONG_PRESSED: u32 = lvgl_sys::lv_event_code_t_LV_EVENT_LONG_PRESSED;
-        const LV_EVENT_LONG_PRESSED_REPEAT: u32 =
+        const LV_EVENT_PRESSED: lvgl_sys::lv_event_code_t =
+            lvgl_sys::lv_event_code_t_LV_EVENT_PRESSED;
+        const LV_EVENT_PRESSING: lvgl_sys::lv_event_code_t =
+            lvgl_sys::lv_event_code_t_LV_EVENT_PRESSING;
+        const LV_EVENT_PRESS_LOST: lvgl_sys::lv_event_code_t =
+            lvgl_sys::lv_event_code_t_LV_EVENT_PRESS_LOST;
+        const LV_EVENT_SHORT_CLICKED: lvgl_sys::lv_event_code_t =
+            lvgl_sys::lv_event_code_t_LV_EVENT_SHORT_CLICKED;
+        const LV_EVENT_CLICKED: lvgl_sys::lv_event_code_t =
+            lvgl_sys::lv_event_code_t_LV_EVENT_CLICKED;
+        const LV_EVENT_LONG_PRESSED: lvgl_sys::lv_event_code_t =
+            lvgl_sys::lv_event_code_t_LV_EVENT_LONG_PRESSED;
+        const LV_EVENT_LONG_PRESSED_REPEAT: lvgl_sys::lv_event_code_t =
             lvgl_sys::lv_event_code_t_LV_EVENT_LONG_PRESSED_REPEAT;
-        const LV_EVENT_RELEASED: u32 = lvgl_sys::lv_event_code_t_LV_EVENT_RELEASED;
-        const LV_EVENT_VALUE_CHANGED: u32 = lvgl_sys::lv_event_code_t_LV_EVENT_VALUE_CHANGED;
-        const LV_EVENT_DRAW_MAIN: u32 = lvgl_sys::lv_event_code_t_LV_EVENT_DRAW_MAIN;
-        const LV_EVENT_DRAW_MAIN_BEGIN: u32 = lvgl_sys::lv_event_code_t_LV_EVENT_DRAW_MAIN_BEGIN;
-        const LV_EVENT_DRAW_MAIN_END: u32 = lvgl_sys::lv_event_code_t_LV_EVENT_DRAW_MAIN_END;
-        const LV_EVENT_DRAW_PART_BEGIN: u32 = lvgl_sys::lv_event_code_t_LV_EVENT_DRAW_PART_BEGIN;
-        const LV_EVENT_DRAW_PART_END: u32 = lvgl_sys::lv_event_code_t_LV_EVENT_DRAW_PART_END;
-        const LV_EVENT_DRAW_POST: u32 = lvgl_sys::lv_event_code_t_LV_EVENT_DRAW_POST;
-        const LV_EVENT_DRAW_POST_BEGIN: u32 = lvgl_sys::lv_event_code_t_LV_EVENT_DRAW_POST_BEGIN;
-        const LV_EVENT_DRAW_POST_END: u32 = lvgl_sys::lv_event_code_t_LV_EVENT_DRAW_POST_END;
+        const LV_EVENT_RELEASED: lvgl_sys::lv_event_code_t =
+            lvgl_sys::lv_event_code_t_LV_EVENT_RELEASED;
+        const LV_EVENT_VALUE_CHANGED: lvgl_sys::lv_event_code_t =
+            lvgl_sys::lv_event_code_t_LV_EVENT_VALUE_CHANGED;
+        const LV_EVENT_DRAW_MAIN: lvgl_sys::lv_event_code_t =
+            lvgl_sys::lv_event_code_t_LV_EVENT_DRAW_MAIN;
+        const LV_EVENT_DRAW_MAIN_BEGIN: lvgl_sys::lv_event_code_t =
+            lvgl_sys::lv_event_code_t_LV_EVENT_DRAW_MAIN_BEGIN;
+        const LV_EVENT_DRAW_MAIN_END: lvgl_sys::lv_event_code_t =
+            lvgl_sys::lv_event_code_t_LV_EVENT_DRAW_MAIN_END;
+        const LV_EVENT_DRAW_PART_BEGIN: lvgl_sys::lv_event_code_t =
+            lvgl_sys::lv_event_code_t_LV_EVENT_DRAW_PART_BEGIN;
+        const LV_EVENT_DRAW_PART_END: lvgl_sys::lv_event_code_t =
+            lvgl_sys::lv_event_code_t_LV_EVENT_DRAW_PART_END;
+        const LV_EVENT_DRAW_POST: lvgl_sys::lv_event_code_t =
+            lvgl_sys::lv_event_code_t_LV_EVENT_DRAW_POST;
+        const LV_EVENT_DRAW_POST_BEGIN: lvgl_sys::lv_event_code_t =
+            lvgl_sys::lv_event_code_t_LV_EVENT_DRAW_POST_BEGIN;
+        const LV_EVENT_DRAW_POST_END: lvgl_sys::lv_event_code_t =
+            lvgl_sys::lv_event_code_t_LV_EVENT_DRAW_POST_END;
 
         match value {
             LV_EVENT_PRESSED => Ok(Event::Pressed),
