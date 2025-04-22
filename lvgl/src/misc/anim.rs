@@ -115,7 +115,7 @@ where
         // yes, we have to do it this way. Casting `obj` directly to `&mut Obj` segfaults
         let obj = (*(obj as *mut T)).raw();
         if !anim.as_ref().user_data.is_null() {
-            let callback = &mut *(obj.as_ref().user_data as *mut F);
+            let callback = &mut *(anim.as_ref().user_data as *mut F);
             let mut obj_nondrop = Obj::from_raw(obj).unwrap();
             callback(&mut obj_nondrop, val);
             mem::forget(obj_nondrop)
