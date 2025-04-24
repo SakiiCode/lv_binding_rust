@@ -22,6 +22,11 @@ use core::mem::{self, MaybeUninit};
 use cty::c_uint;
 use paste::paste;
 
+#[cfg(unix)]
+type CEnum = u32;
+#[cfg(windows)]
+type CEnum = i32;
+
 pub enum Themes {
     Pretty,
 }
@@ -56,7 +61,7 @@ impl Default for Style {
 bitflags! {
     /// Represents possible opacities for use on `Style` objects.
     #[derive(Debug, Clone, Copy)]
-    pub struct Opacity: u32 {
+    pub struct Opacity: CEnum {
         const OPA_TRANSP = lvgl_sys::LV_OPA_TRANSP;
         const OPA_0 = lvgl_sys::LV_OPA_0;
         const OPA_10 = lvgl_sys::LV_OPA_10;
@@ -73,14 +78,14 @@ bitflags! {
     }
 }
 
-impl From<Opacity> for u8 {
-    fn from(value: Opacity) -> u8 {
-        value.bits() as u8
+impl From<Opacity> for lvgl_sys::lv_opa_t {
+    fn from(value: Opacity) -> lvgl_sys::lv_opa_t {
+        value.bits() as lvgl_sys::lv_opa_t
     }
 }
 
 bitflags! {
-    pub struct GridAlign: c_uint {
+    pub struct GridAlign: lvgl_sys::lv_grid_align_t {
         const START = lvgl_sys::lv_grid_align_t_LV_GRID_ALIGN_START;
         const CENTER = lvgl_sys::lv_grid_align_t_LV_GRID_ALIGN_CENTER;
         const END = lvgl_sys::lv_grid_align_t_LV_GRID_ALIGN_END;
@@ -91,9 +96,9 @@ bitflags! {
     }
 }
 
-impl From<GridAlign> for c_uint {
+impl From<GridAlign> for lvgl_sys::lv_grid_align_t {
     fn from(value: GridAlign) -> Self {
-        value.bits() as c_uint
+        value.bits() as lvgl_sys::lv_grid_align_t
     }
 }
 
@@ -104,7 +109,7 @@ impl From<GridAlign> for i16 {
 }
 
 bitflags! {
-    pub struct FlexAlign: c_uint {
+    pub struct FlexAlign: lvgl_sys::lv_flex_align_t {
         const START = lvgl_sys::lv_flex_align_t_LV_FLEX_ALIGN_START;
         const CENTER = lvgl_sys::lv_flex_align_t_LV_FLEX_ALIGN_CENTER;
         const END = lvgl_sys::lv_flex_align_t_LV_FLEX_ALIGN_END;
@@ -114,14 +119,14 @@ bitflags! {
     }
 }
 
-impl From<FlexAlign> for c_uint {
+impl From<FlexAlign> for lvgl_sys::lv_flex_align_t {
     fn from(value: FlexAlign) -> Self {
-        value.bits() as c_uint
+        value.bits() as lvgl_sys::lv_flex_align_t
     }
 }
 
 bitflags! {
-    pub struct FlexFlow: c_uint {
+    pub struct FlexFlow: lvgl_sys::lv_flex_flow_t {
         const COLUMN = lvgl_sys::lv_flex_flow_t_LV_FLEX_FLOW_COLUMN;
         const COLUMN_REVERSE = lvgl_sys::lv_flex_flow_t_LV_FLEX_FLOW_COLUMN_REVERSE;
         const COLUMN_WRAP = lvgl_sys::lv_flex_flow_t_LV_FLEX_FLOW_COLUMN_WRAP;
@@ -133,9 +138,9 @@ bitflags! {
     }
 }
 
-impl From<FlexFlow> for c_uint {
+impl From<FlexFlow> for lvgl_sys::lv_flex_flow_t {
     fn from(value: FlexFlow) -> Self {
-        value.bits() as c_uint
+        value.bits() as lvgl_sys::lv_flex_flow_t
     }
 }
 
@@ -245,7 +250,7 @@ impl From<lvgl_sys::lv_style_value_t> for StyleValues {
 bitflags! {
     /// Various constants relevant for `Style` parameters
     #[derive(PartialEq, Eq)]
-    pub struct StyleProp: u32 {
+    pub struct StyleProp:  lvgl_sys::lv_style_prop_t {
         //const PROP_INV = lvgl_sys::lv_style_prop_t_LV_STYLE_PROP_INV;
 
         /*Group 0*/
@@ -459,7 +464,7 @@ impl Style {
             lvgl_sys::lv_style_get_prop(self.raw.clone().into_raw() as *const _, prop.bits(), ptr)
         };
         let raw_ret = unsafe { raw_ret.assume_init() };
-        if <u8 as Into<u32>>::into(result) == lvgl_sys::LV_RES_OK {
+        if <u8 as Into<lvgl_sys::lv_style_prop_t>>::into(result) == lvgl_sys::LV_RES_OK {
             unsafe {
                 ret = match ret {
                     StyleValues::Num(_) => StyleValues::Num(raw_ret.num),

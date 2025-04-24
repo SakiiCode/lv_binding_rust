@@ -8,6 +8,11 @@ use core::ptr::NonNull;
 #[cfg(feature = "embedded_graphics")]
 use embedded_graphics::pixelcolor::{Rgb565, Rgb888};
 
+#[cfg(unix)]
+type CEnum = u32;
+#[cfg(windows)]
+type CEnum = i32;
+
 pub type LvResult<T> = Result<T, LvError>;
 
 /// Generic LVGL error. All other errors can be coerced into it.
@@ -400,6 +405,7 @@ impl From<AnimationState> for lvgl_sys::lv_anim_enable_t {
     }
 }
 
+#[cfg(unix)]
 #[repr(u32)]
 pub enum LabelLongMode {
     Clip = lvgl_sys::LV_LABEL_LONG_CLIP,
@@ -409,9 +415,19 @@ pub enum LabelLongMode {
     Wrap = lvgl_sys::LV_LABEL_LONG_WRAP,
 }
 
-impl From<LabelLongMode> for u8 {
+#[cfg(windows)]
+#[repr(i32)]
+pub enum LabelLongMode {
+    Clip = lvgl_sys::LV_LABEL_LONG_CLIP,
+    Dot = lvgl_sys::LV_LABEL_LONG_DOT,
+    Scroll = lvgl_sys::LV_LABEL_LONG_SCROLL,
+    ScrollCircular = lvgl_sys::LV_LABEL_LONG_SCROLL_CIRCULAR,
+    Wrap = lvgl_sys::LV_LABEL_LONG_WRAP,
+}
+
+impl From<LabelLongMode> for lvgl_sys::lv_label_long_mode_t {
     fn from(value: LabelLongMode) -> Self {
-        unsafe { (value as u32).try_into().unwrap_unchecked() }
+        unsafe { (value as CEnum).try_into().unwrap_unchecked() }
     }
 }
 

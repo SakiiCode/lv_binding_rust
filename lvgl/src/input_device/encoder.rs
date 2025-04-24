@@ -119,21 +119,23 @@ unsafe extern "C" fn read_input<F>(
             BufferStatus::Once(b) => {
                 (*data).state = match b {
                     InputState::Pressed(Data::Encoder(d)) => {
+                        // needs i32 -> u32 conversion on windows
                         (*data).key = match d {
                             EncoderInputData::Press => lvgl_sys::LV_KEY_ENTER,
                             EncoderInputData::LongPress => lvgl_sys::LV_KEY_ENTER,
                             EncoderInputData::TurnLeft => lvgl_sys::LV_KEY_LEFT,
                             EncoderInputData::TurnRight => lvgl_sys::LV_KEY_RIGHT,
-                        };
+                        } as u32;
                         lvgl_sys::lv_indev_state_t_LV_INDEV_STATE_PRESSED
                     }
                     InputState::Released(Data::Encoder(d)) => {
+                        // needs i32 -> u32 conversion on windows
                         (*data).key = match d {
                             EncoderInputData::Press => lvgl_sys::LV_KEY_ENTER,
                             EncoderInputData::LongPress => lvgl_sys::LV_KEY_ENTER,
                             EncoderInputData::TurnLeft => lvgl_sys::LV_KEY_LEFT,
                             EncoderInputData::TurnRight => lvgl_sys::LV_KEY_RIGHT,
-                        };
+                        } as u32;
                         lvgl_sys::lv_indev_state_t_LV_INDEV_STATE_RELEASED
                     }
                     _ => panic!("Non-encoder data returned from encoder device!"),
@@ -143,21 +145,23 @@ unsafe extern "C" fn read_input<F>(
             BufferStatus::Buffered(b) => {
                 (*data).state = match b {
                     InputState::Pressed(Data::Encoder(d)) => {
+                        // needs i32 -> u32 conversion on windows
                         (*data).key = match d {
                             EncoderInputData::Press => lvgl_sys::LV_KEY_ENTER,
                             EncoderInputData::LongPress => lvgl_sys::LV_KEY_ENTER,
                             EncoderInputData::TurnLeft => lvgl_sys::LV_KEY_LEFT,
                             EncoderInputData::TurnRight => lvgl_sys::LV_KEY_RIGHT,
-                        };
+                        } as u32;
                         lvgl_sys::lv_indev_state_t_LV_INDEV_STATE_PRESSED
                     }
                     InputState::Released(Data::Encoder(d)) => {
+                        // needs i32 -> u32 conversion on windows
                         (*data).key = match d {
                             EncoderInputData::Press => lvgl_sys::LV_KEY_ENTER,
                             EncoderInputData::LongPress => lvgl_sys::LV_KEY_ENTER,
                             EncoderInputData::TurnLeft => lvgl_sys::LV_KEY_LEFT,
                             EncoderInputData::TurnRight => lvgl_sys::LV_KEY_RIGHT,
-                        };
+                        } as u32;
                         lvgl_sys::lv_indev_state_t_LV_INDEV_STATE_RELEASED
                     }
                     _ => panic!("Non-encoder data returned from encoder device!"),

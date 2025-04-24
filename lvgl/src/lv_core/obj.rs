@@ -278,7 +278,8 @@ impl Default for Part {
 
 impl From<Part> for lvgl_sys::lv_part_t {
     fn from(self_: Part) -> lvgl_sys::lv_part_t {
-        match self_ {
+        // needs i32 -> u32 conversion on windows
+        (match self_ {
             Part::Main => lvgl_sys::LV_PART_MAIN,
             Part::Scrollbar => lvgl_sys::LV_PART_SCROLLBAR,
             Part::Indicator => lvgl_sys::LV_PART_INDICATOR,
@@ -289,6 +290,6 @@ impl From<Part> for lvgl_sys::lv_part_t {
             Part::Cursor => lvgl_sys::LV_PART_CURSOR,
             Part::CustomFirst => lvgl_sys::LV_PART_CUSTOM_FIRST,
             Part::Any => lvgl_sys::LV_PART_ANY,
-        }
+        }) as lvgl_sys::lv_part_t
     }
 }
