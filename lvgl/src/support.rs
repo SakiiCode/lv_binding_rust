@@ -8,11 +8,6 @@ use core::ptr::NonNull;
 #[cfg(feature = "embedded_graphics")]
 use embedded_graphics::pixelcolor::{Rgb565, Rgb888};
 
-#[cfg(unix)]
-type CEnum = u32;
-#[cfg(windows)]
-type CEnum = i32;
-
 pub type LvResult<T> = Result<T, LvError>;
 
 /// Generic LVGL error. All other errors can be coerced into it.
@@ -427,7 +422,7 @@ pub enum LabelLongMode {
 
 impl From<LabelLongMode> for lvgl_sys::lv_label_long_mode_t {
     fn from(value: LabelLongMode) -> Self {
-        unsafe { (value as CEnum).try_into().unwrap_unchecked() }
+        unsafe { value.try_into().unwrap_unchecked() }
     }
 }
 
