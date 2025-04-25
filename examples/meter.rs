@@ -1,17 +1,15 @@
 // TODO: Redo this example.
 
-/*
 use embedded_graphics::pixelcolor::Rgb565;
 use embedded_graphics::prelude::*;
 use embedded_graphics_simulator::{
     OutputSettingsBuilder, SimulatorDisplay, SimulatorEvent, Window,
 };
-use lvgl;
 use lvgl::style::{Opacity, Style};
 use lvgl::widgets::Meter;
-use lvgl::{
-    Align, Color, Display, DrawBuffer, LvError, Part, State, Widget,
-};
+use lvgl::{self, NativeObject};
+use lvgl::{Align, Color, Display, DrawBuffer, LvError, Part, Widget};
+use lvgl_sys::{lv_palette_main, lv_palette_t_LV_PALETTE_GREY};
 use std::time::Duration;
 
 fn main() -> Result<(), LvError> {
@@ -27,16 +25,14 @@ fn main() -> Result<(), LvError> {
     let buffer = DrawBuffer::<{ (HOR_RES * VER_RES) as usize }>::default();
 
     let display = Display::register(buffer, HOR_RES, VER_RES, |refresh| {
-        sim_display
-            .draw_iter(refresh.as_pixels())
-            .unwrap();
+        sim_display.draw_iter(refresh.as_pixels()).unwrap();
     })?;
 
     let mut screen = display.get_scr_act()?;
 
     let mut screen_style = Style::default();
     screen_style.set_bg_color(Color::from_rgb((0, 0, 0)));
-    screen.add_style(Part::Main, &mut screen_style)?;
+    screen.add_style(Part::Main, &mut screen_style);
 
     // Create the gauge
     let mut gauge_style = Style::default();
@@ -46,9 +42,9 @@ fn main() -> Result<(), LvError> {
     gauge_style.set_bg_color(Color::from_rgb((192, 192, 192)));
     // Set some padding's
     //gauge_style.set_pad_inner(20);
-    gauge_style.set_pad_top(20);
-    gauge_style.set_pad_left(5);
-    gauge_style.set_pad_right(5);
+    // gauge_style.set_pad_top(20);
+    // gauge_style.set_pad_left(5);
+    // gauge_style.set_pad_right(5);
 
     //gauge_style.set_scale_end_color(Color::from_rgb((255, 0, 0)));
     gauge_style.set_line_color(Color::from_rgb((255, 255, 255)));
@@ -57,15 +53,27 @@ fn main() -> Result<(), LvError> {
     //gauge_style.set_scale_end_line_width(4);
     //gauge_style.set_scale_end_border_width(4);
 
-    let mut gauge = Gauge::create(&mut screen, None)?;
-    gauge.add_style(Part::Main, &mut gauge_style)?;
-    gauge.set_align(&mut screen, Align::Center, 0, 0)?;
-    gauge.set_value(0, 50)?;
+    let mut gauge = Meter::create(&mut screen)?;
+    gauge.add_style(Part::Main, &mut gauge_style);
+    gauge.set_align(Align::Center, 0, 0);
+
+    let indic;
+    unsafe {
+        let scale = lvgl_sys::lv_meter_add_scale(gauge.raw().as_ptr());
+        indic = lvgl_sys::lv_meter_add_needle_line(
+            gauge.raw().as_ptr(),
+            scale,
+            4,
+            lv_palette_main(lv_palette_t_LV_PALETTE_GREY),
+            -10,
+        )
+        .as_mut()
+        .unwrap();
+    }
 
     let mut i = 0;
-    let mut loop_started = Instant::now();
     'running: loop {
-        gauge.set_value(0, i)?;
+        gauge.set_indicator_value(indic, i);
 
         lvgl::task_handler();
         window.update(&sim_display);
@@ -93,9 +101,4 @@ fn main() -> Result<(), LvError> {
     }
 
     Ok(())
-}
-*/
-
-fn main() {
-    println!("Currently broken :c")
 }
