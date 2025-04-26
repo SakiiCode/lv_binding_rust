@@ -17,7 +17,16 @@ use lvgl::widgets::{Btn, Btnmatrix, Canvas, Chart, Dropdown, Label};
 use lvgl::{self, NativeObject, Obj};
 use lvgl::{Align, Color, Display, DrawBuffer, LvError, Part, Widget};
 use lvgl_sys::{
-    lv_anim_path_ease_out, lv_chart_add_series, lv_chart_type_t, lv_coord_t, lv_flex_flow_t_LV_FLEX_FLOW_COLUMN, lv_grid_align_t_LV_GRID_ALIGN_CENTER, lv_grid_align_t_LV_GRID_ALIGN_START, lv_grid_align_t_LV_GRID_ALIGN_STRETCH, lv_label_set_text, lv_obj_set_grid_cell, lv_obj_set_style_opa, lv_obj_set_width, lv_opa_t, lv_palette_t_LV_PALETTE_AMBER, lv_palette_t_LV_PALETTE_BLUE, lv_palette_t_LV_PALETTE_BLUE_GREY, lv_palette_t_LV_PALETTE_BROWN, lv_palette_t_LV_PALETTE_DEEP_ORANGE, lv_palette_t_LV_PALETTE_DEEP_PURPLE, lv_palette_t_LV_PALETTE_GREY, lv_palette_t_LV_PALETTE_PURPLE, lv_palette_t_LV_PALETTE_RED, lv_palette_t_LV_PALETTE_TEAL, LV_CHART_AXIS_PRIMARY_X, LV_CHART_TYPE_BAR, LV_GRID_CONTENT, LV_GRID_TEMPLATE_LAST, LV_OBJ_FLAG_HIDDEN, LV_OPA_50, LV_OPA_70, LV_OPA_COVER, LV_PART_MAIN
+    lv_chart_add_series, lv_chart_type_t, lv_coord_t,
+    lv_flex_flow_t_LV_FLEX_FLOW_COLUMN, lv_grid_align_t_LV_GRID_ALIGN_CENTER,
+    lv_grid_align_t_LV_GRID_ALIGN_START, lv_grid_align_t_LV_GRID_ALIGN_STRETCH, lv_label_set_text,
+    lv_obj_set_grid_cell, lv_obj_set_style_opa, lv_obj_set_width, lv_opa_t,
+    lv_palette_t_LV_PALETTE_AMBER, lv_palette_t_LV_PALETTE_BLUE, lv_palette_t_LV_PALETTE_BLUE_GREY,
+    lv_palette_t_LV_PALETTE_BROWN, lv_palette_t_LV_PALETTE_DEEP_ORANGE,
+    lv_palette_t_LV_PALETTE_DEEP_PURPLE, lv_palette_t_LV_PALETTE_GREY,
+    lv_palette_t_LV_PALETTE_PURPLE, lv_palette_t_LV_PALETTE_RED, lv_palette_t_LV_PALETTE_TEAL,
+    LV_CHART_AXIS_PRIMARY_X, LV_CHART_TYPE_BAR, LV_GRID_CONTENT, LV_GRID_TEMPLATE_LAST,
+    LV_OBJ_FLAG_HIDDEN, LV_OPA_50, LV_OPA_70, LV_OPA_COVER, LV_PART_MAIN,
 };
 use std::thread::sleep;
 use std::time::Duration;
@@ -158,7 +167,6 @@ fn main() -> Result<(), LvError> {
 
     /*Manually set the subject's value*/
     //lv_subject_set_int(&chart_type_subject, 1);
-
 
     let mut label = Label::create(&mut screen)?;
     unsafe {
@@ -344,7 +352,6 @@ fn main() -> Result<(), LvError> {
 }
 
 fn list_button_create<'a>(parent: &mut impl NativeObject) -> Result<(Btn<'a>, Label<'a>), LvError> {
-    //fn list_button_create<'a>(parent: &mut impl NativeObject) -> Result<Btn<'a>, LvError> {
     let mut btn = Btn::create(parent)?;
     btn.set_size(lv_pct!(100), LV_SIZE_CONTENT as i16);
     let idx;
@@ -355,5 +362,4 @@ fn list_button_create<'a>(parent: &mut impl NativeObject) -> Result<(Btn<'a>, La
     label.set_text(CString::new(format!("Item {idx}")).unwrap().as_c_str());
 
     Ok((btn, label))
-    //Ok(btn)
 }
