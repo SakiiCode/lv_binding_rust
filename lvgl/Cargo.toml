@@ -119,6 +119,11 @@ path = "../examples/arc.rs"
 required-features = ["alloc", "embedded_graphics"]
 
 [[example]]
+name = "binding_test"
+path = "../examples/binding_test.rs"
+required-features = ["alloc", "embedded_graphics"]
+
+[[example]]
 name = "sdl"
 path = "../examples/sdl.rs"
 required-features = ["alloc", "drivers"]
