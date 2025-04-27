@@ -5,8 +5,8 @@
 //! are special in that they do not have a parent object but do still implement
 //! `NativeObject`.
 
-use crate::lv_core::style::Style;
-use crate::{Align, LvError, LvResult};
+use crate::widgets::Widget;
+use crate::{LvError, LvResult};
 use core::fmt::{self, Debug};
 use core::marker::PhantomData;
 use core::ptr::{self, NonNull};
@@ -78,7 +78,7 @@ impl NativeObject for Obj<'_> {
 }
 
 /// A wrapper for all LVGL common operations on generic objects.
-pub trait Widget<'a>: NativeObject + Sized + 'a {
+/*pub trait Widget<'a>: NativeObject + Sized + 'a {
     type SpecialEvent;
     type Part: Into<lvgl_sys::lv_part_t>;
 
@@ -149,7 +149,7 @@ pub trait Widget<'a>: NativeObject + Sized + 'a {
             );
         }
     }
-}
+}*/
 
 impl<'a> Widget<'a> for Obj<'a> {
     type SpecialEvent = u32;
@@ -185,7 +185,7 @@ macro_rules! define_object {
         impl<'a> $item<'a> {
             pub fn on_event<F>(&mut self, f: F) -> $crate::LvResult<()>
             where
-                F: FnMut(Self, $crate::support::Event<<Self as $crate::Widget<'a>>::SpecialEvent>),
+                F: FnMut(Self, $crate::support::Event<<Self as Widget<'a>>::SpecialEvent>),
             {
                 use $crate::NativeObject;
                 unsafe {
@@ -210,7 +210,7 @@ macro_rules! define_object {
             }
         }
 
-        impl<'a> $crate::Widget<'a> for $item<'a> {
+        impl<'a> Widget<'a> for $item<'a> {
             type SpecialEvent = $event_type;
             type Part = $part_type;
 

@@ -58,20 +58,28 @@ impl Rusty for LvWidget {
     type Parent = ();
 
     fn code(&self, _parent: &Self::Parent) -> WrapperResult<TokenStream> {
-        // We don't generate for the generic Obj
-        if self.name.as_str().eq("obj") {
-            return Err(WrapperError::Skip);
-        }
-
         let widget_name = format_ident!("{}", self.pascal_name());
         let methods: Vec<TokenStream> = self.methods.iter().flat_map(|m| m.code(self)).collect();
-        Ok(quote! {
-            define_object!(#widget_name);
+        if self.name.as_str().eq("obj") {
+            Ok(quote! {
+                pub trait Widget<'a>: NativeObject + Sized + 'a {
+                    type SpecialEvent;
+                    type Part: Into<lvgl_sys::lv_part_t>;
 
-            impl<'a> #widget_name<'a> {
-                #(#methods)*
-            }
-        })
+                    unsafe fn from_raw(raw_pointer: core::ptr::NonNull<lvgl_sys::lv_obj_t>) -> Option<Self>;
+
+                    #(#methods)*
+                }
+            })
+        } else {
+            Ok(quote! {
+                define_object!(#widget_name);
+
+                impl<'a> #widget_name<'a> {
+                    #(#methods)*
+                }
+            })
+        }
     }
 }
 
@@ -106,7 +114,7 @@ impl Rusty for LvFunc {
         let original_func_name = format_ident!("{}", self.name.as_str());
 
         // generate constructor
-        if new_name.as_str().eq("create") {
+        if new_name.as_str().eq("create") && parent.name != "obj" {
             return Ok(quote! {
 
                 pub fn create(parent: &mut impl crate::NativeObject) -> crate::LvResult<Self> {
@@ -115,7 +123,7 @@ impl Rusty for LvFunc {
                             parent.raw().as_mut(),
                         );
                         if let Some(raw) = core::ptr::NonNull::new(ptr) {
-                            let core = <crate::Obj as crate::Widget>::from_raw(raw).unwrap();
+                            let core = <crate::Obj as Widget>::from_raw(raw).unwrap();
                             Ok(Self { core })
                         } else {
                             Err(crate::LvError::InvalidReference)
@@ -243,7 +251,11 @@ impl Rusty for LvFunc {
                 .enumerate()
                 .fold(quote!(), |args_accumulator, (arg_idx, arg)| {
                     let next_arg = if arg_idx == 0 {
-                        quote!(self.core.raw().as_mut())
+                        if parent.name == "obj" {
+                            quote!(self.raw().as_mut())
+                        } else {
+                            quote!(self.core.raw().as_mut())
+                        }
                     } else if arg.typ.is_mut_native_object() {
                         let var = arg.get_value_usage();
                         quote! {#var.raw().as_mut()}
@@ -275,17 +287,30 @@ impl Rusty for LvFunc {
             None => quote!(;),
             _ => quote!(),
         };
-
-        Ok(quote! {
-            pub fn #func_name(#args_decl) -> #return_type {
-                unsafe {
-                    #args_preprocessing
-                    lvgl_sys::#original_func_name(#ffi_args)#optional_semicolon
-                    #args_postprocessing
-                    #explicit_ok
+        if parent.name == "obj" {
+            // pub keyword cannot be used in traits
+            Ok(quote! {
+                fn #func_name(#args_decl) -> #return_type {
+                    unsafe {
+                        #args_preprocessing
+                        lvgl_sys::#original_func_name(#ffi_args)#optional_semicolon
+                        #args_postprocessing
+                        #explicit_ok
+                    }
                 }
-            }
-        })
+            })
+        } else {
+            Ok(quote! {
+                pub fn #func_name(#args_decl) -> #return_type {
+                    unsafe {
+                        #args_preprocessing
+                        lvgl_sys::#original_func_name(#ffi_args)#optional_semicolon
+                        #args_postprocessing
+                        #explicit_ok
+                    }
+                }
+            })
+        }
     }
 }
 
@@ -927,7 +952,7 @@ mod test {
                             parent.raw().as_mut(),
                         );
                         if let Some(raw) = core::ptr::NonNull::new(ptr) {
-                            let core = <crate::Obj as crate::Widget>::from_raw(raw).unwrap();
+                            let core = <crate::Obj as Widget>::from_raw(raw).unwrap();
                             Ok(Self { core })
                         } else {
                             Err(crate::LvError::InvalidReference)

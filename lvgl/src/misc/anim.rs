@@ -1,4 +1,4 @@
-use crate::{Box, LvResult, Obj, Widget};
+use crate::{widgets::Widget, Box, LvResult, Obj};
 use core::{
     mem::{self, MaybeUninit},
     num::TryFromIntError,

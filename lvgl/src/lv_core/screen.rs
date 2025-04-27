@@ -1,4 +1,4 @@
-use crate::{LvError, LvResult, NativeObject, Obj, Part, Widget};
+use crate::{widgets::Widget, LvError, LvResult, NativeObject, Obj, Part};
 
 /// An LVGL screen.
 #[derive(Debug)]

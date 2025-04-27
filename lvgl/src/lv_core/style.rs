@@ -33,6 +33,12 @@ pub struct Style {
     pub(crate) raw: Box<lvgl_sys::lv_style_t>,
 }
 
+impl Style {
+    pub fn into_raw(self) -> &'static mut lvgl_sys::lv_style_t {
+        unsafe { self.raw.into_raw().as_mut().unwrap() }
+    }
+}
+
 impl Debug for Style {
     // TODO: Decode and dump style values
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {

@@ -1,5 +1,4 @@
-use crate::display::DisplayError;
-use crate::Widget;
+use crate::{display::DisplayError, widgets::Widget};
 use core::convert::{TryFrom, TryInto};
 #[cfg(feature = "nightly")]
 use core::error::Error;
