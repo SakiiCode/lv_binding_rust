@@ -3,13 +3,13 @@
 //! Objects in LVGL can have associated styling information. After a `Style` is
 //! created and configured, it can be added to any object or widget:
 //! ```
-//! use lvgl::{Color, Widget};
+//! use lvgl::{Color, Part};
 //! use lvgl::style::Style;
 //!
 //! let mut my_style = Style::default();
 //! my_style.set_text_color(Color::from_rgb((0, 0, 0)));
 //!
-//! //my_widget.add_style(Part::Main, &mut my_style).unwrap();
+//! // my_widget.add_style(my_style.into_raw(), Part::Main.into());
 //! // ...
 //! ```
 //! All methods on the `Style` type directly lower to their C LVGL
