@@ -7,8 +7,8 @@ use embedded_graphics_simulator::{
 use lvgl;
 use lvgl::font::Font;
 use lvgl::style::Style;
-use lvgl::widgets::Label;
-use lvgl::{Align, Color, Display, DrawBuffer, LvError, Part, TextAlign, Widget};
+use lvgl::widgets::{Label, Widget};
+use lvgl::{Align, Color, Display, DrawBuffer, LvError, Part, TextAlign};
 use lvgl_sys;
 use std::thread::sleep;
 use std::time::Duration;
@@ -35,14 +35,14 @@ fn main() -> Result<(), LvError> {
 
     // Create screen and widgets
     let binding = display?;
-    let screen = binding.get_scr_act();
+    let mut screen = binding.get_scr_act()?;
 
     println!("Before all widgets: {:?}", mem_info());
 
     let mut screen_style = Style::default();
     screen_style.set_bg_color(Color::from_rgb((0, 0, 0)));
     screen_style.set_radius(0);
-    screen?.add_style(Part::Main, &mut screen_style);
+    screen.add_style(screen_style.into_raw(), Part::Main.into());
 
     let mut time = Label::from("20:46");
     let mut style_time = Style::default();
@@ -52,8 +52,8 @@ fn main() -> Result<(), LvError> {
     // See font module documentation for an explanation of the unsafe block
     style_time.set_text_font(unsafe { Font::new_raw(lvgl_sys::noto_sans_numeric_80) });
 
-    time.add_style(Part::Main, &mut style_time);
-    time.set_align(Align::Center, 0, 90);
+    time.add_style(style_time.into_raw(), Part::Main.into());
+    time.align(Align::Center.into(), 0, 90);
     time.set_width(240);
     time.set_height(240);
 
@@ -61,13 +61,13 @@ fn main() -> Result<(), LvError> {
     bt.set_width(50);
     bt.set_height(80);
     let _ = bt.set_recolor(true);
-    bt.set_align(Align::TopLeft, 0, 0);
+    bt.align(Align::TopLeft.into(), 0, 0);
 
     let mut power: Label = "#fade2a 20%#".into();
     let _ = power.set_recolor(true);
     power.set_width(80);
     power.set_height(20);
-    power.set_align(Align::TopRight, 40, 0);
+    power.align(Align::TopRight.into(), 40, 0);
 
     let mut i = 0;
     'running: loop {

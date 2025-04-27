@@ -11,8 +11,8 @@ use lvgl::input_device::{
     InputDriver,
 };
 use lvgl::style::Style;
-use lvgl::widgets::{Btn, Label};
-use lvgl::{Align, Color, Display, DrawBuffer, LvError, Part, Widget};
+use lvgl::widgets::{Btn, Label, Widget};
+use lvgl::{Align, Color, Display, DrawBuffer, LvError, Part};
 use std::thread::sleep;
 use std::time::Duration;
 use std::time::Instant;
@@ -45,10 +45,10 @@ fn main() -> Result<(), LvError> {
 
     let mut screen_style = Style::default();
     screen_style.set_bg_color(Color::from_rgb((0, 0, 0)));
-    screen.add_style(Part::Main, &mut screen_style);
+    screen.add_style(screen_style.into_raw(), Part::Main.into());
     // Create the button
     let mut button = Btn::create(&mut screen)?;
-    button.set_align(Align::LeftMid, 30, 0);
+    button.align(Align::LeftMid.into(), 30, 0);
     button.set_size(180, 80);
     let mut btn_lbl = Label::create(&mut button)?;
     btn_lbl.set_text(CString::new("Click me!").unwrap().as_c_str());
