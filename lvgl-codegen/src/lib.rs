@@ -259,6 +259,9 @@ impl Rusty for LvFunc {
                     } else if arg.typ.is_mut_native_object() {
                         let var = arg.get_value_usage();
                         quote! {#var.raw().as_mut()}
+                    }else if arg.typ.is_const_native_object() {
+                        let var = arg.get_value_usage();
+                        quote! {#var.raw().as_ref()}
                     } else {
                         let var = arg.get_value_usage();
                         quote!(#var)
@@ -460,8 +463,14 @@ impl LvType {
         self.literal_name == "* mut cty :: c_char"
     }
 
+    pub fn is_const_native_object(&self) -> bool {
+        self.literal_name == "* const lv_obj_t" || 
+        self.literal_name == "* const _lv_obj_t"
+    }
+
     pub fn is_mut_native_object(&self) -> bool {
-        self.literal_name == "* mut lv_obj_t"
+        self.literal_name == "* mut lv_obj_t" || 
+        self.literal_name == "* mut _lv_obj_t"
     }
 
     pub fn is_pointer(&self) -> bool {
@@ -481,6 +490,8 @@ impl Rusty for LvType {
             quote!(&cstr_core::CStr)
         } else if self.is_mut_str() {
             quote!(&mut cstr_core::CString)
+        }else if self.is_const_native_object() {
+            quote!(&impl NativeObject)
         } else if self.is_mut_native_object() {
             quote!(&mut impl NativeObject)
         } else if self.is_array() {
