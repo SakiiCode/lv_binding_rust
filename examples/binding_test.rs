@@ -11,22 +11,21 @@ use lvgl::input_device::{
     InputDriver,
 };
 use lvgl::misc::anim::{AnimRepeatCount, Animation};
-use lvgl::misc::area::LV_SIZE_CONTENT;
+use lvgl::misc::area::{pct, LV_SIZE_CONTENT};
 use lvgl::style::{Opacity, Style};
-use lvgl::widgets::{Btn, Btnmatrix, Canvas, Chart, Dropdown, Label};
+use lvgl::widgets::{Btn, Btnmatrix, Canvas, Chart, Dropdown, Label, Widget};
 use lvgl::{self, NativeObject, Obj};
-use lvgl::{Align, Color, Display, DrawBuffer, LvError, Part, Widget};
+use lvgl::{Align, Color, Display, DrawBuffer, LvError, Part};
 use lvgl_sys::{
-    lv_chart_add_series, lv_chart_type_t, lv_coord_t,
-    lv_flex_flow_t_LV_FLEX_FLOW_COLUMN, lv_grid_align_t_LV_GRID_ALIGN_CENTER,
-    lv_grid_align_t_LV_GRID_ALIGN_START, lv_grid_align_t_LV_GRID_ALIGN_STRETCH, lv_label_set_text,
-    lv_obj_set_grid_cell, lv_obj_set_style_opa, lv_obj_set_width, lv_opa_t,
-    lv_palette_t_LV_PALETTE_AMBER, lv_palette_t_LV_PALETTE_BLUE, lv_palette_t_LV_PALETTE_BLUE_GREY,
-    lv_palette_t_LV_PALETTE_BROWN, lv_palette_t_LV_PALETTE_DEEP_ORANGE,
-    lv_palette_t_LV_PALETTE_DEEP_PURPLE, lv_palette_t_LV_PALETTE_GREY,
-    lv_palette_t_LV_PALETTE_PURPLE, lv_palette_t_LV_PALETTE_RED, lv_palette_t_LV_PALETTE_TEAL,
-    LV_CHART_AXIS_PRIMARY_X, LV_CHART_TYPE_BAR, LV_GRID_CONTENT, LV_GRID_TEMPLATE_LAST,
-    LV_OBJ_FLAG_HIDDEN, LV_OPA_50, LV_OPA_70, LV_OPA_COVER, LV_PART_MAIN,
+    lv_chart_add_series, lv_chart_type_t, lv_coord_t, lv_flex_flow_t_LV_FLEX_FLOW_COLUMN,
+    lv_grid_align_t_LV_GRID_ALIGN_CENTER, lv_grid_align_t_LV_GRID_ALIGN_START,
+    lv_grid_align_t_LV_GRID_ALIGN_STRETCH, lv_label_set_text, lv_obj_set_grid_cell,
+    lv_obj_set_style_opa, lv_obj_set_width, lv_opa_t, lv_palette_t_LV_PALETTE_AMBER,
+    lv_palette_t_LV_PALETTE_BLUE, lv_palette_t_LV_PALETTE_BLUE_GREY, lv_palette_t_LV_PALETTE_BROWN,
+    lv_palette_t_LV_PALETTE_DEEP_ORANGE, lv_palette_t_LV_PALETTE_DEEP_PURPLE,
+    lv_palette_t_LV_PALETTE_GREY, lv_palette_t_LV_PALETTE_PURPLE, lv_palette_t_LV_PALETTE_RED,
+    lv_palette_t_LV_PALETTE_TEAL, LV_CHART_AXIS_PRIMARY_X, LV_CHART_TYPE_BAR, LV_GRID_CONTENT,
+    LV_GRID_TEMPLATE_LAST, LV_OBJ_FLAG_HIDDEN, LV_OPA_50, LV_OPA_70, LV_OPA_COVER, LV_PART_MAIN,
 };
 use std::thread::sleep;
 use std::time::Duration;
@@ -38,27 +37,6 @@ macro_rules! lv_grid_fr {
         lvgl_sys::LV_COORD_MAX - 100 + $x
     };
 }
-
-// #define _LV_COORD_TYPE_SHIFT    (13U)
-// #define _LV_COORD_TYPE_SPEC     (1 << _LV_COORD_TYPE_SHIFT)
-// #define LV_COORD_SET_SPEC(x)   ((x) | _LV_COORD_TYPE_SPEC)
-macro_rules! lv_coord_set_spec {
-    ($x: expr) => {
-        ($x) | (1 << 13u32)
-    };
-}
-
-// #define LV_PCT(x)              (x < 0 ? LV_COORD_SET_SPEC(1000 - (x)) : LV_COORD_SET_SPEC(x))
-macro_rules! lv_pct {
-    ($x: literal) => {
-        if $x < 0 {
-            lv_coord_set_spec!(1000 - ($x))
-        } else {
-            lv_coord_set_spec!($x)
-        }
-    };
-}
-
 macro_rules! lv_canvas_buf_size_indexed_2bit {
     ($w: literal, $h:literal) => {
         ((($w / 4) + 1) * $h)
@@ -114,53 +92,41 @@ fn main() -> Result<(), LvError> {
         LV_GRID_CONTENT as i16,
         LV_GRID_TEMPLATE_LAST as i16,
     ];
-    unsafe {
-        lvgl_sys::lv_obj_set_grid_dsc_array(
-            screen.raw().as_ptr(),
-            grid_cols.as_ptr(),
-            grid_rows.as_ptr(),
-        );
-    }
+    screen.set_grid_dsc_array(&grid_cols[0], &grid_rows[0]);
 
     //let chart_type_subject = Subject::new()?;
     //lv_subject_init_int(&chart_type_subject, 0);
 
     let mut dropdown = Dropdown::create(&mut screen)?;
     dropdown.set_options(cstr_core::cstr!("Lines\nBars"));
-    unsafe {
-        lvgl_sys::lv_obj_set_grid_cell(
-            dropdown.raw().as_ptr(),
-            lv_grid_align_t_LV_GRID_ALIGN_CENTER,
-            0,
-            1,
-            lv_grid_align_t_LV_GRID_ALIGN_CENTER,
-            0,
-            1,
-        );
-        //dropdown.bind_value(&mut chart_type_subject);
-        dropdown.set_selected(1);
-    }
+    dropdown.set_grid_cell(
+        lv_grid_align_t_LV_GRID_ALIGN_CENTER,
+        0,
+        1,
+        lv_grid_align_t_LV_GRID_ALIGN_CENTER,
+        0,
+        1,
+    );
+    dropdown.set_selected(1);
 
     /*Create a chart with an external array of points*/
+    let mut chart = Chart::create(&mut screen)?;
+    chart.set_grid_cell(
+        lv_grid_align_t_LV_GRID_ALIGN_STRETCH,
+        0,
+        1,
+        lv_grid_align_t_LV_GRID_ALIGN_CENTER,
+        1,
+        1,
+    );
     unsafe {
-        let mut chart = Chart::create(&mut screen)?;
-        lvgl_sys::lv_obj_set_grid_cell(
-            chart.raw().as_ptr(),
-            lv_grid_align_t_LV_GRID_ALIGN_STRETCH,
-            0,
-            1,
-            lv_grid_align_t_LV_GRID_ALIGN_CENTER,
-            1,
-            1,
-        );
-
         let series =
             lvgl_sys::lv_chart_add_series(chart.raw().as_ptr(), c3, LV_CHART_AXIS_PRIMARY_X as u8);
 
         let mut chart_y_array = [10, 25, 50, 40, 30, 35, 60, 65, 70, 75];
         chart.set_ext_y_array(series.as_mut().unwrap(), &mut chart_y_array[0]);
-        chart.set_type(LV_CHART_TYPE_BAR as lv_chart_type_t);
     }
+    chart.set_type(LV_CHART_TYPE_BAR as lv_chart_type_t);
 
     /*Add custom observer callback*/
     //lv_subject_add_observer_obj(&chart_type_subject, chart_type_observer_cb, chart, NULL);
@@ -169,24 +135,21 @@ fn main() -> Result<(), LvError> {
     //lv_subject_set_int(&chart_type_subject, 1);
 
     let mut label = Label::create(&mut screen)?;
-    unsafe {
-        lvgl_sys::lv_obj_set_grid_cell(
-            label.raw().as_ptr(),
-            lv_grid_align_t_LV_GRID_ALIGN_START,
-            1,
-            1,
-            lv_grid_align_t_LV_GRID_ALIGN_CENTER,
-            0,
-            1,
-        );
-    }
+    label.set_grid_cell(
+        lv_grid_align_t_LV_GRID_ALIGN_START,
+        1,
+        1,
+        lv_grid_align_t_LV_GRID_ALIGN_CENTER,
+        0,
+        1,
+    );
 
     let mut label_style = Style::default();
     label_style.set_bg_opa(Opacity::OPA_70);
     label_style.set_bg_color(Color::from_raw(c1));
     label_style.set_text_color(Color::from_raw(c2));
-    label.add_style(Part::Main, &mut label_style);
-    label.add_style(Part::Main, &mut style_big_font);
+    label.add_style(label_style.into_raw(), Part::Main.into());
+    label.add_style(style_big_font.into_raw(), Part::Main.into());
 
     let mut btnmatrix_options = [
         cstr!("First").as_ptr(),
@@ -203,33 +166,29 @@ fn main() -> Result<(), LvError> {
     ];
 
     let mut btnmatrix = Btnmatrix::create(&mut screen)?;
+    btnmatrix.set_grid_cell(
+        lv_grid_align_t_LV_GRID_ALIGN_STRETCH,
+        1,
+        1,
+        lv_grid_align_t_LV_GRID_ALIGN_STRETCH,
+        1,
+        1,
+    );
     unsafe {
-        lvgl_sys::lv_obj_set_grid_cell(
-            btnmatrix.raw().as_ptr(),
-            lv_grid_align_t_LV_GRID_ALIGN_STRETCH,
-            1,
-            1,
-            lv_grid_align_t_LV_GRID_ALIGN_STRETCH,
-            1,
-            1,
-        );
         lvgl_sys::lv_btnmatrix_set_map(btnmatrix.raw().as_ptr(), btnmatrix_options.as_mut_ptr());
-        lvgl_sys::lv_btnmatrix_set_ctrl_map(btnmatrix.raw().as_ptr(), btnmatrix_ctrl.as_ptr());
     }
+    btnmatrix.set_ctrl_map(&btnmatrix_ctrl[0]);
 
     let mut cont = Obj::create(&mut screen)?;
-    unsafe {
-        lvgl_sys::lv_obj_set_grid_cell(
-            cont.raw().as_ptr(),
-            lv_grid_align_t_LV_GRID_ALIGN_STRETCH,
-            2,
-            1,
-            lv_grid_align_t_LV_GRID_ALIGN_STRETCH,
-            0,
-            2,
-        );
-        lvgl_sys::lv_obj_set_flex_flow(cont.raw().as_ptr(), lv_flex_flow_t_LV_FLEX_FLOW_COLUMN);
-    }
+    cont.set_grid_cell(
+        lv_grid_align_t_LV_GRID_ALIGN_STRETCH,
+        2,
+        1,
+        lv_grid_align_t_LV_GRID_ALIGN_STRETCH,
+        0,
+        2,
+    );
+    cont.set_flex_flow(lv_flex_flow_t_LV_FLEX_FLOW_COLUMN);
 
     let mut btns: Vec<Btn> = Vec::with_capacity(10);
     let mut labels: Vec<Label> = Vec::new();
@@ -240,11 +199,11 @@ fn main() -> Result<(), LvError> {
         if i == 0 {
             /*let mut a = Animation::new(
                 &mut btn,
-                Duration::from_secs(1),
+                Duration::from_secs(5),
                 LV_OPA_COVER as i32,
                 LV_OPA_50 as i32,
-                |obj, val| unsafe {
-                    lv_obj_set_style_opa(obj.raw().as_ptr(), val as lv_opa_t, LV_PART_MAIN);
+                |obj, val| {
+                    obj.set_style_opa(val as lv_opa_t, Part::Main.into());
                 },
             )?;
             a.start();
@@ -258,13 +217,14 @@ fn main() -> Result<(), LvError> {
         }
 
         if i == 2 {
-            // unsafe {
-            //     let mut label = lvgl_sys::lv_obj_get_child(btn.raw().as_ptr(), 0);
-            //     lv_label_set_text(label, cstr!("A multi-line text with a ° symbol").as_ptr());
-            //     lv_obj_set_width(label, lv_pct!(100));
-            // }
-            label.set_text(cstr!("A multi-line text with a ° symbol"));
-            label.set_width(lv_pct!(100));
+            unsafe {
+                let mut label = lvgl_sys::lv_obj_get_child(btn.raw().as_ptr(), 0);
+                lv_label_set_text(label, cstr!("A multi-line text with a ° symbol").as_ptr());
+                lv_obj_set_width(label, pct(100));
+            }
+            // safe version
+            // label.set_text(cstr!("A multi-line text with a ° symbol"));
+            // label.set_width(lv_pct!(100));
         }
 
         if i == 4 {
@@ -289,17 +249,15 @@ fn main() -> Result<(), LvError> {
 
     let mut canvas = Canvas::create(&mut screen)?;
     canvas.set_size(400, 100);
+    canvas.set_grid_cell(
+        lv_grid_align_t_LV_GRID_ALIGN_START,
+        0,
+        2,
+        lv_grid_align_t_LV_GRID_ALIGN_START,
+        2,
+        1,
+    );
     unsafe {
-        let canvas = canvas.raw().as_ptr();
-        lvgl_sys::lv_obj_set_grid_cell(
-            canvas,
-            lv_grid_align_t_LV_GRID_ALIGN_START,
-            0,
-            2,
-            lv_grid_align_t_LV_GRID_ALIGN_START,
-            2,
-            1,
-        );
         /*lvgl_sys::lv_canvas_set_buffer(
             canvas,
             lvgl_sys::lv_draw_buf_align(canvas_buf, LV_COLOR_FORMAT_RGB565),
@@ -353,7 +311,7 @@ fn main() -> Result<(), LvError> {
 
 fn list_button_create<'a>(parent: &mut impl NativeObject) -> Result<(Btn<'a>, Label<'a>), LvError> {
     let mut btn = Btn::create(parent)?;
-    btn.set_size(lv_pct!(100), LV_SIZE_CONTENT as i16);
+    btn.set_size(pct(100), LV_SIZE_CONTENT as i16);
     let idx;
     unsafe {
         idx = lvgl_sys::lv_obj_get_index(btn.raw().as_ptr());
